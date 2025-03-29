@@ -1,0 +1,53 @@
+[project]
+name = "gym-management-systemm"
+authors = [
+    {name = "Paradoxo"},
+]
+requires-python = ">=3.12"
+dependencies = [
+    "starlette",
+]
+
+[project.optional-dependencies]
+dev = ["ruff"]
+
+[tool.ruff]
+line-length = 80
+indent-width = 4
+output-format = "grouped"
+show-fixes = true
+required-version = ">=0.11.0,<0.12"
+respect-gitignore = true
+fix = true
+
+[tool.ruff.lint]
+extend-select = [
+    "E",
+    "W",
+    "ASYNC",
+    "S",
+    "B",
+    "A",
+    "C4",
+    "DTZ",
+    "LOG",
+    "G",
+    "PIE",
+    "PYI",
+    "SIM",
+    "PTH",
+    "I",
+    "C90",
+    "N",
+    "UP"
+    # "D"
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore `E402` (import violations) in all `__init__.py` files, and in `path/to/file.py`.
+# "__init__.py" = ["E402"]
+
+[tool.ruff.format]
+docstring-code-format = true
+indent-style = "space"
+quote-style = "double"
