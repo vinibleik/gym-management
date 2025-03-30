@@ -1,4 +1,4 @@
-.PHONY: lint lint-full lint-unsafe format
+.PHONY: run lint lint-unsafe lint-full format
 
 run: lint format
 	@python main.py
