@@ -174,3 +174,5 @@ cython_debug/
 .pypirc
 database/*.db
 todo.txt
+t.py
+*_vini.py
