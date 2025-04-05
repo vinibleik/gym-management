@@ -62,7 +62,7 @@ class TestFieldError(unittest.TestCase):
     def test_should_return_dict_with_no_reason(self):
         self.assertEqual(
             self.error_no_reason.to_dict(),
-            {"name": self.name, "value": self.value, "reason": None},
+            {"name": self.name, "value": self.value},
         )
 
     def test_should_return_json_str_with_reason(self):
@@ -76,9 +76,7 @@ class TestFieldError(unittest.TestCase):
     def test_should_return_json_str_with_no_reason(self):
         self.assertEqual(
             self.error_no_reason.to_json(),
-            json.dumps(
-                {"name": self.name, "value": self.value, "reason": None}
-            ),
+            json.dumps({"name": self.name, "value": self.value}),
         )
 
 

@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass, fields, is_dataclass
-from typing import Any, TypedDict
+from typing import Any, NotRequired, TypedDict
 
 _INIT_NAME = "__init__"
 
@@ -8,7 +8,7 @@ _INIT_NAME = "__init__"
 class FieldErrorDict(TypedDict):
     name: str
     value: Any
-    reason: str | None
+    reason: NotRequired[str]
 
 
 @dataclass
@@ -18,10 +18,13 @@ class FieldError(Exception):
     reason: str | None = None
 
     def to_dict(self) -> FieldErrorDict:
-        return {"name": self.name, "value": self.value, "reason": self.reason}
+        self_dict: FieldErrorDict = {"name": self.name, "value": self.value}
+        if self.reason:
+            self_dict["reason"] = self.reason
+        return self_dict
 
     def to_json(self) -> str:
-        return json.dumps(self.to_dict())
+        return json.dumps(self.to_dict(), default=str)
 
     def __str__(self) -> str:
         _repr = f"{self.__class__.__name__}: Invalid value <{self.value}> for field <{self.name}>"
@@ -52,7 +55,7 @@ class ValidationError(Exception):
         }
 
     def to_json(self) -> str:
-        return json.dumps(self.to_dict())
+        return json.dumps(self.to_dict(), default=str)
 
     def __str__(self) -> str:
         errors_str = "\n".join(map(str, self.errors))
