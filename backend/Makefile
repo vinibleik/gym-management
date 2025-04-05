@@ -3,6 +3,12 @@
 run: lint format
 	@python main.py
 
+test:
+	@python -m unittest
+
+test-verbose:
+	@python -m unittest -v
+
 lint:
 	@ruff check --fix
 
