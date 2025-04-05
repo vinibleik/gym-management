@@ -113,14 +113,3 @@ def validate_dataclass(cls):
     setattr(cls, _INIT_NAME, validate__init__)
 
     return cls
-
-
-if __name__ == "__main__":
-    f = FieldError("name", "invalid", "Reason")
-    print(f.to_dict())
-    print(str(f))
-    print(repr(f))
-    f = FieldError("name", "invalid")
-    print(f.to_dict())
-    print(str(f))
-    print(repr(f))
