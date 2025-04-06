@@ -4,7 +4,12 @@ from dataclasses import dataclass
 from typing import Any
 from unittest.mock import MagicMock
 
-from src.utils import FieldError, ValidationError, validate_dataclass
+from src.utils import (
+    FieldError,
+    SerializeDataclass,
+    ValidationError,
+    validate_dataclass,
+)
 
 
 class TestFieldError(unittest.TestCase):
@@ -437,3 +442,141 @@ class TestValidateDataclass(unittest.TestCase):
                 return True
 
         Boss("", 23)
+
+
+class TestSerializeDataclass(unittest.TestCase):
+    def test_should_transform_to_dict(self):
+        @dataclass
+        class Person(SerializeDataclass):
+            name: str
+            age: int
+
+        d = {"name": "name", "age": 23}
+        self.assertDictEqual(Person(**d).to_dict(), d)
+
+    def test_should_transform_to_dict_inheritance(self):
+        @dataclass
+        class Person(SerializeDataclass):
+            name: str
+            age: int
+
+        @dataclass
+        class Student(Person, SerializeDataclass):
+            id: int
+
+        d = {"name": "name", "age": 23, "id": 0}
+        self.assertDictEqual(Student(**d).to_dict(), d)
+
+    def test_should_exclude_to_dict(self):
+        @dataclass
+        class Person(SerializeDataclass):
+            name: str
+            age: int
+
+        d = {"name": "name", "age": 23}
+        p = Person(**d)
+        self.assertDictEqual(p.to_dict(exclude=["name"]), {"age": 23})
+        self.assertDictEqual(
+            p.to_dict(exclude=["name", "other", "fields"]), {"age": 23}
+        )
+        self.assertDictEqual(p.to_dict(exclude=["age"]), {"name": "name"})
+        self.assertDictEqual(p.to_dict(exclude=["name", "age"]), {})
+        self.assertDictEqual(
+            p.to_dict(exclude=["name", "age", "other", "fields"]), {}
+        )
+
+    def test_should_exclude_to_dict_inheritance(self):
+        @dataclass
+        class Person(SerializeDataclass):
+            name: str
+            age: int
+
+        @dataclass
+        class Student(Person, SerializeDataclass):
+            id: int
+
+        d = {"name": "name", "age": 23, "id": 0}
+        s = Student(**d)
+        self.assertDictEqual(s.to_dict(exclude=["name"]), {"age": 23, "id": 0})
+        self.assertDictEqual(
+            s.to_dict(exclude=["name", "other", "fields", "id"]), {"age": 23}
+        )
+        self.assertDictEqual(s.to_dict(exclude=["age", "name"]), {"id": 0})
+        self.assertDictEqual(s.to_dict(exclude=["name", "age", "id"]), {})
+        self.assertDictEqual(
+            s.to_dict(exclude=["name", "age", "other", "fields", "id"]), {}
+        )
+
+    def test_should_transform_to_json(self):
+        @dataclass
+        class Person(SerializeDataclass):
+            name: str
+            age: int
+
+        d = {"name": "name", "age": 23}
+        self.assertEqual(Person(**d).to_json(), json.dumps(d))
+
+    def test_should_transform_to_json_inheritance(self):
+        @dataclass
+        class Person(SerializeDataclass):
+            name: str
+            age: int
+
+        @dataclass
+        class Student(Person, SerializeDataclass):
+            id: int
+
+        d = {"name": "name", "age": 23, "id": 0}
+        self.assertEqual(Student(**d).to_json(), json.dumps(d))
+
+    def test_should_exclude_to_json(self):
+        @dataclass
+        class Person(SerializeDataclass):
+            name: str
+            age: int
+
+        d = {"name": "name", "age": 23}
+        p = Person(**d)
+        self.assertEqual(p.to_json(exclude=["name"]), json.dumps({"age": 23}))
+        self.assertEqual(
+            p.to_json(exclude=["name", "other", "fields"]),
+            json.dumps({"age": 23}),
+        )
+        self.assertEqual(
+            p.to_json(exclude=["age"]), json.dumps({"name": "name"})
+        )
+        self.assertEqual(p.to_json(exclude=["name", "age"]), json.dumps({}))
+        self.assertEqual(
+            p.to_json(exclude=["name", "age", "other", "fields"]),
+            json.dumps({}),
+        )
+
+    def test_should_exclude_to_json_inheritance(self):
+        @dataclass
+        class Person(SerializeDataclass):
+            name: str
+            age: int
+
+        @dataclass
+        class Student(Person, SerializeDataclass):
+            id: int
+
+        d = {"name": "name", "age": 23, "id": 0}
+        s = Student(**d)
+        self.assertEqual(
+            s.to_json(exclude=["name"]), json.dumps({"age": 23, "id": 0})
+        )
+        self.assertEqual(
+            s.to_json(exclude=["name", "other", "fields", "id"]),
+            json.dumps({"age": 23}),
+        )
+        self.assertEqual(
+            s.to_json(exclude=["age", "name"]), json.dumps({"id": 0})
+        )
+        self.assertEqual(
+            s.to_json(exclude=["name", "age", "id"]), json.dumps({})
+        )
+        self.assertEqual(
+            s.to_json(exclude=["name", "age", "other", "fields", "id"]),
+            json.dumps({}),
+        )
