@@ -2,14 +2,20 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from typing import Any, ClassVar, Literal
 
-from src.utils import FieldError, validate_dataclass
+from src.utils.dataclass import (
+    FieldError,
+    SerializeDataclass,
+    validate_dataclass,
+)
 
 UserRole = Literal["staff", "personal", "student"]
 
 
 @validate_dataclass
 @dataclass
-class BaseUser:
+class UserBase(SerializeDataclass):
+    """User shared properties."""
+
     username: str
     name: str
     date_of_birth: date
@@ -85,3 +91,39 @@ class BaseUser:
                 < (self.date_of_birth.month, self.date_of_birth.day)
             )  # Subtract the current year if the day of born was not reached
         )
+
+
+@validate_dataclass
+@dataclass
+class UserCreate(UserBase):
+    """Properties to receive on User creation."""
+
+    password_hash: str
+
+
+@validate_dataclass
+@dataclass
+class UserUpdate(UserBase):
+    """Properties to receive on User update."""
+
+
+@validate_dataclass
+@dataclass
+class UserInDBBase(UserBase):
+    """Properties shared by models stored in Database"""
+
+    id: int
+
+
+@validate_dataclass
+@dataclass
+class User(UserInDBBase):
+    """Properties to return to the client"""
+
+
+@validate_dataclass
+@dataclass
+class UserInDB(UserInDBBase):
+    """All User properties stored in Database"""
+
+    password_hash: str
