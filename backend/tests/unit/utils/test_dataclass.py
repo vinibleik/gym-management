@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 from unittest.mock import MagicMock
 
-from src.utils import (
+from src.utils.dataclass import (
     FieldError,
     SerializeDataclass,
     ValidationError,
