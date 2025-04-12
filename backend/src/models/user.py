@@ -103,7 +103,7 @@ class UserCreate(UserBase):
 
 @validate_dataclass
 @dataclass
-class UserUpdate(UserBase):
+class UserUpdate(UserCreate):
     """Properties to receive on User update."""
 
 
