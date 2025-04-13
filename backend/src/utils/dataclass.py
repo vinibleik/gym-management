@@ -17,6 +17,13 @@ class SerializeDataclass:
     ) -> str:
         return json.dumps(self.to_dict(exclude), indent=indent)
 
+    @classmethod
+    def model_fields(cls):
+        return [f.name for f in fields(cls)]
+
+    def __getitem__(self, index):
+        return getattr(self, index)
+
 
 class FieldErrorDict(TypedDict):
     name: str
