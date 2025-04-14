@@ -29,14 +29,12 @@ class TestInMemoryUserRepository(unittest.TestCase):
             name="new_name",
             date_of_birth=date(1999, 9, 9),
             role="staff",
-            password_hash="hash",
         )
         self.user_update2 = UserUpdate(
             username="username",
             name="name",
             date_of_birth=date(1999, 9, 9),
             role="staff",
-            password_hash="new_password",
         )
         self.user_in_db_1 = UserInDB(
             id=0,
@@ -68,7 +66,7 @@ class TestInMemoryUserRepository(unittest.TestCase):
             name="name",
             date_of_birth=date(1999, 9, 9),
             role="staff",
-            password_hash="new_password",
+            password_hash="hash",
         )
 
     def test_create(self):

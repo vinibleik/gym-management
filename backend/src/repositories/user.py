@@ -94,7 +94,7 @@ class InMemoryUserRepository(UserRepository):
     @override
     def create(self, user: UserCreate) -> UserInDB:
         new_user_id = self._cur_index
-        new_user = UserInDB(id=self._cur_index, **user.to_dict())
+        new_user = UserInDB.from_user_create(new_user_id, user)
         self._data[new_user_id] = new_user
         self._cur_index += 1
         return new_user
@@ -105,7 +105,7 @@ class InMemoryUserRepository(UserRepository):
 
     @override
     def update(self, user_id: int, user: UserUpdate) -> UserInDB | None:
-        u = self._data.get(user_id, None)
+        u = self.find_by_id(user_id)
         if u is None:
             return None
         u = UserInDB(**{**u.to_dict(), **user.to_dict()})
