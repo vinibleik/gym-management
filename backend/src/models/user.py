@@ -1,15 +1,23 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from typing import Any, ClassVar, Literal
 
-from src.utils import FieldError, validate_dataclass
+from src.utils.dataclass import (
+    FieldError,
+    SerializeDataclass,
+    validate_dataclass,
+)
 
 UserRole = Literal["staff", "personal", "student"]
 
 
 @validate_dataclass
 @dataclass
-class BaseUser:
+class UserBase(SerializeDataclass):
+    """User shared properties."""
+
     username: str
     name: str
     date_of_birth: date
@@ -85,3 +93,76 @@ class BaseUser:
                 < (self.date_of_birth.month, self.date_of_birth.day)
             )  # Subtract the current year if the day of born was not reached
         )
+
+    def to_dict(
+        self, exclude: list[str] | None = None, transform: bool = False
+    ) -> dict[str, Any]:
+        d = super().to_dict(exclude)
+        if transform:
+            d["date_of_birth"] = self.date_of_birth.isoformat()
+        return d
+
+
+@validate_dataclass
+@dataclass
+class UserCreate(UserBase):
+    """Properties to receive on User creation."""
+
+    password_hash: str
+
+
+@validate_dataclass
+@dataclass
+class UserCreateBody(UserBase):
+    """Properties to receive on User creation request."""
+
+    password: str
+
+    PASSWORD_MIN_LENGTH: ClassVar[int] = 8
+
+    def __validate_password__(self, name: str, value: Any) -> bool:
+        if not isinstance(value, str) or len(value) < self.PASSWORD_MIN_LENGTH:
+            raise FieldError(
+                name,
+                value,
+                f"password must be a string with at least {self.PASSWORD_MIN_LENGTH} characters.",  # noqa
+            )
+        return True
+
+
+@validate_dataclass
+@dataclass
+class UserUpdate(UserBase):
+    """Properties to receive on User update."""
+
+
+@validate_dataclass
+@dataclass
+class UserInDBBase(UserBase):
+    """Properties shared by models stored in Database"""
+
+    id: int
+
+
+@validate_dataclass
+@dataclass
+class User(UserInDBBase):
+    """Properties to return to the client"""
+
+    @classmethod
+    def from_db_model(cls, user: UserInDB) -> User:
+        return cls(**user.to_dict(exclude=["password_hash"]))
+
+
+@validate_dataclass
+@dataclass
+class UserInDB(UserInDBBase):
+    """All User properties stored in Database"""
+
+    password_hash: str
+
+    @classmethod
+    def from_user_create(
+        cls, user_id: int, user_create: UserCreate
+    ) -> UserInDB:
+        return cls(id=user_id, **user_create.to_dict())

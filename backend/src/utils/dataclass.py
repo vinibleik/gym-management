@@ -1,8 +1,28 @@
 import json
-from dataclasses import dataclass, fields, is_dataclass
+from dataclasses import asdict, dataclass, fields, is_dataclass
 from typing import Any, NotRequired, TypedDict
 
 _INIT_NAME = "__init__"
+
+
+@dataclass
+class SerializeDataclass:
+    def to_dict(self, exclude: list[str] | None = None) -> dict[str, Any]:
+        if exclude is None:
+            return asdict(self)
+        return {k: v for k, v in asdict(self).items() if k not in exclude}
+
+    def to_json(
+        self, *, indent: int | None = None, exclude: list[str] | None = None
+    ) -> str:
+        return json.dumps(self.to_dict(exclude), indent=indent)
+
+    @classmethod
+    def model_fields(cls):
+        return [f.name for f in fields(cls)]
+
+    def __getitem__(self, index):
+        return getattr(self, index)
 
 
 class FieldErrorDict(TypedDict):
