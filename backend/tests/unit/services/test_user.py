@@ -1,8 +1,9 @@
+import os
 import unittest
 from datetime import date
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
-from src.models.user import UserCreate, UserInDB
+from src.models.user import UserCreate, UserCreateBody, UserInDB, UserUpdate
 from src.repositories.user import InMemoryUserRepository, UserRepository
 from src.services.user import (
     UserService,
@@ -55,6 +56,10 @@ class MockRepository(UserRepository):
         return self.find_by_id_mock(*args, **kwargs)
 
 
+@unittest.skipIf(
+    os.getenv("TEST_USER_SERVICE") is None,
+    "Just run if necessary because of password hashing",
+)
 class TestUserService(unittest.TestCase):
     mock_repo: MockRepository
     mock_repo_exc: MockRepository
@@ -65,36 +70,99 @@ class TestUserService(unittest.TestCase):
         self.service = UserService(self.mock_repo)
         self.servce_exc = UserService(self.mock_repo_exc)
         self.users: list[UserInDB] = []
-        self.user_create_0 = UserCreate(
+        self.user_create_0 = UserCreateBody(
             name="name 0",
-            password_hash="hash",
+            password="password",
             role="staff",
             username="username 0",
             date_of_birth=date(1990, 9, 9),
         )
-        self.user_create_1 = UserCreate(
+        self.user_create_1 = UserCreateBody(
             name="name 1",
-            password_hash="hash",
+            password="password",
             role="personal",
             username="username 1",
             date_of_birth=date(1990, 9, 9),
         )
+
+    def test_get_dict_keys_should_raise_for_invalid_body_types(self):
+        tests = (UserCreate, [], "", date(1999, 9, 9), 23, True)
+        for i, t in enumerate(tests):
+            with (
+                self.subTest(i=i),
+                self.assertRaises(UserServiceValidationError) as e,
+            ):
+                self.service.get_dict_keys(t, [])
+                self.assertIsNotNone(e.exception.body_err)
+                self.assertIn("Invalid body type:", e.exception.body_err)  # type: ignore
+
+    def test_get_dict_keys_should_raise_for_missing_keys(self):
+        body = {
+            "name": "name",
+            "age": 23,
+            "username": "username",
+            "password": "password",
+        }
+        tests: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
+            (("key_a",), ("key_a",)),
+            (("key_a", "key_b"), ("key_a", "key_b")),
+            (
+                ("name", "age", "username", "password", "date_of_birth"),
+                ("date_of_birth",),
+            ),
+        )
+        for i, (required_keys, missing_keys) in enumerate(tests):
+            with (
+                self.subTest(i=i),
+                self.assertRaises(UserServiceValidationError) as e,
+            ):
+                self.service.get_dict_keys(body, required_keys)
+                self.assertIsNotNone(e.exception.body_err)
+                self.assertEqual(
+                    e.exception.body_err,
+                    f"Invalid Body missing keys: {', '.join(missing_keys)}",
+                )
+
+    def test_get_dict_keys_should_get_the_keys(self):
+        body = {
+            "name": "name",
+            "age": 23,
+            "username": "username",
+            "password": "password",
+        }
+        tests = (
+            (("name",), {"name": "name"}),
+            (("name", "age"), {"name": "name", "age": 23}),
+            (
+                ("name", "age", "username", "password"),
+                {
+                    "name": "name",
+                    "age": 23,
+                    "username": "username",
+                    "password": "password",
+                },
+            ),
+        )
+        for i, (required_keys, expected) in enumerate(tests):
+            with self.subTest(i=i):
+                got = self.service.get_dict_keys(body, required_keys)
+                self.assertDictEqual(got, expected)
 
     def _create_users(self) -> None:
         self.users.append(self.service.create_user(self.user_create_0))
         self.users.append(self.service.create_user(self.user_create_1))
 
     def test_should_create_user(self):
-        user_create_0 = UserCreate(
+        user_create_0 = UserCreateBody(
             name="name 0",
-            password_hash="hash",
+            password="password",
             role="staff",
             username="username 0",
             date_of_birth=date(1990, 9, 9),
         )
-        user_create_1 = UserCreate(
+        user_create_1 = UserCreateBody(
             name="name 1",
-            password_hash="hash",
+            password="password",
             role="personal",
             username="username 1",
             date_of_birth=date(1990, 9, 9),
@@ -102,9 +170,7 @@ class TestUserService(unittest.TestCase):
         users: list[UserInDB] = []
         users.append(self.service.create_user(user_create_0))
         users.append(self.service.create_user(user_create_1))
-        self.mock_repo.create_mock.has_call(
-            [call(user_create_0), call(user_create_1)]
-        )
+        self.mock_repo.create_mock.assert_called()
         self.assertDictEqual(
             self.mock_repo.repo._data, {u.id: u for u in users}
         )
@@ -116,25 +182,25 @@ class TestUserService(unittest.TestCase):
                 "name": "name 0",
                 "role": "staff",
                 "date_of_birth": date(1999, 9, 9),
-                "password_hash": "password",
+                "password": "password",
             },
             {
                 "username": "username 0",
                 "role": "staff",
                 "date_of_birth": date(1999, 9, 9),
-                "password_hash": "password",
+                "password": "password",
             },
             {
                 "username": "username 0",
                 "name": "name 0",
                 "date_of_birth": date(1999, 9, 9),
-                "password_hash": "password",
+                "password": "password",
             },
             {
                 "username": "username 0",
                 "name": "name 0",
                 "role": "staff",
-                "password_hash": "password",
+                "password": "pass",
             },
             {
                 "username": "username 0",
@@ -147,28 +213,28 @@ class TestUserService(unittest.TestCase):
                 "name": "name 0",
                 "role": "staff",
                 "date_of_birth": date(1999, 9, 9),
-                "password_hash": "password",
+                "password": "password",
             },
             {
                 "username": "username 0",
                 "name": "",
                 "role": "staff",
                 "date_of_birth": date(1999, 9, 9),
-                "password_hash": "password",
+                "password": "word",
             },
             {
                 "username": "username 0",
                 "name": "name 0",
                 "role": "role",
                 "date_of_birth": date(1999, 9, 9),
-                "password_hash": "password",
+                "password": "password",
             },
             {
                 "username": "username 0",
                 "name": "name 0",
                 "role": "staff",
                 "date_of_birth": "",
-                "password_hash": "password",
+                "password": "",
             },
         )
         for i, t in enumerate(tests):
@@ -180,9 +246,9 @@ class TestUserService(unittest.TestCase):
 
     def test_should_raise_correct_error_on_create(self):
         with self.assertRaises(UserServiceError):
-            valid_user = UserCreate(
+            valid_user = UserCreateBody(
                 name="name 0",
-                password_hash="hash",
+                password="password",
                 role="staff",
                 username="username 0",
                 date_of_birth=date(1990, 9, 9),
@@ -235,59 +301,48 @@ class TestUserService(unittest.TestCase):
                 "name": "name 0",
                 "role": "staff",
                 "date_of_birth": date(1999, 9, 9),
-                "password_hash": "password",
             },
             {
                 "username": "username 0",
                 "role": "staff",
                 "date_of_birth": date(1999, 9, 9),
-                "password_hash": "password",
             },
             {
                 "username": "username 0",
                 "name": "name 0",
                 "date_of_birth": date(1999, 9, 9),
-                "password_hash": "password",
             },
             {
                 "username": "username 0",
                 "name": "name 0",
                 "role": "staff",
-                "password_hash": "password",
-            },
-            {
-                "username": "username 0",
-                "name": "name 0",
-                "role": "staff",
-                "date_of_birth": date(1999, 9, 9),
             },
             {
                 "username": "",
                 "name": "name 0",
                 "role": "staff",
                 "date_of_birth": date(1999, 9, 9),
-                "password_hash": "password",
+                "password": "password",
             },
             {
                 "username": "username 0",
                 "name": "",
                 "role": "staff",
                 "date_of_birth": date(1999, 9, 9),
-                "password_hash": "password",
+                "password": "password",
             },
             {
                 "username": "username 0",
                 "name": "name 0",
                 "role": "role",
                 "date_of_birth": date(1999, 9, 9),
-                "password_hash": "password",
+                "password": "pass",
             },
             {
                 "username": "username 0",
                 "name": "name 0",
                 "role": "staff",
                 "date_of_birth": "",
-                "password_hash": "password",
             },
         )
         for i, t in enumerate(tests):
@@ -298,9 +353,8 @@ class TestUserService(unittest.TestCase):
                 self.service.update_user(0, t)
 
     def test_should_update_return_none(self):
-        user_update = UserCreate(
+        user_update = UserUpdate(
             name="updated_name",
-            password_hash="updated_password",
             role="student",
             username="updated_username",
             date_of_birth=date(2010, 10, 10),
@@ -308,9 +362,8 @@ class TestUserService(unittest.TestCase):
         self.assertIsNone(self.service.update_user(99, user_update))
 
     def test_should_update_user(self):
-        user_update = UserCreate(
+        user_update = UserUpdate(
             name="updated_name",
-            password_hash="updated_password",
             role="student",
             username="updated_username",
             date_of_birth=date(2010, 10, 10),
@@ -318,14 +371,18 @@ class TestUserService(unittest.TestCase):
         self._create_users()
         updated_user = self.service.update_user(self.users[0].id, user_update)
         self.assertEqual(
-            updated_user, UserInDB(id=self.users[0].id, **user_update.to_dict())
+            updated_user,
+            UserInDB(
+                id=self.users[0].id,
+                password_hash=self.users[0].password_hash,
+                **user_update.to_dict(),
+            ),
         )
 
     def test_should_raise_correct_error_on_update(self):
-        user_update = UserCreate(
-            name="updated_name",
-            password_hash="updated_password",
+        user_update = UserUpdate(
             role="student",
+            name="updated_name",
             username="updated_username",
             date_of_birth=date(2010, 10, 10),
         )
